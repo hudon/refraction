@@ -31,9 +31,9 @@ raw nLockTime transaction.
 
 ## Authors
 
-- [Antonio Juliano](github/AntonioJuliano)
-- [James Hudon](github.com/hudon)
-- [Jim Posen](github.com/jimpo)
+- [Antonio Juliano](https://github/AntonioJuliano)
+- [James Hudon](https://github.com/hudon)
+- [Jim Posen](https://github.com/jimpo)
 
 
 ## License
