@@ -1,0 +1,15 @@
+{
+  "aliceClient": {
+    "destination": "qsu33twdme5te4bx.onion"
+  },
+  "bobClient": {
+    "server": {
+      "host": "127.0.0.1",
+      "port": 8080
+    }
+  },
+  "tor": {
+    "ip": "127.0.0.1",
+    "port": 9150
+  }
+}
