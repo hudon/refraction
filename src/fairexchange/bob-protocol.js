@@ -12,7 +12,7 @@ const BaseProtocol = require('./base-protocol');
 const ALICE_TIMEOUT = 1 * 60 * 60;  // One hour
 const BOB_TIMEOUT = 2 * 60 * 60;  // Two hours
 const N = 100;
-const M = 97;
+const M = 95;
 
 class BobProtocol extends BaseProtocol {
   constructor({ client, amount, privateKeyIn, outAddress }) {
@@ -136,7 +136,7 @@ class BobProtocol extends BaseProtocol {
     })
       .then(({ transaction, redeemScript }) => {
         this.bobCommitRedeemScript = redeemScript;
-        return blockchain.broadcastTransaction(transaction).then(() => transaction);
+        return blockchain.broadcast(transaction).then(() => transaction);
       })
       .then((transaction) => {
         this.client.send('bobCommitment', { tx: transaction.toString() });
@@ -184,7 +184,7 @@ class BobProtocol extends BaseProtocol {
       .then((transaction) => {
         console.log(`Broadcasting claim transaction ${transaction.hash}`);
         console.log(`DEBUG: ${transaction.toString()}`);
-        return blockchain.broadcastTransaction(transaction).then(() => transaction);
+        return blockchain.broadcast(transaction).then(() => transaction);
       });
   }
 
@@ -203,7 +203,7 @@ class BobProtocol extends BaseProtocol {
       .then((transaction) => {
         console.log(`Broadcasting refund transaction ${transaction.hash}`);
         console.log(`DEBUG: ${transaction.toString()}`);
-        return blockchain.broadcastTransaction(transaction).then(() => transaction);
+        return blockchain.broadcast(transaction).then(() => transaction);
       })
       .then(() => {
         throw new Error(

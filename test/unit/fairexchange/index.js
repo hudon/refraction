@@ -1,5 +1,7 @@
 'use strict';
 
+require('../../support/config');
+
 const expect = require('chai').expect;
 
 const fairExchange = require('../../../src/fairexchange');

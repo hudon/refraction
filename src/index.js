@@ -18,12 +18,9 @@ program
   .option('-p, --private-key <hex>', 'Private key for input')
   .parse(process.argv);
 
-var configPath = program.configPath || '../examples/config.json';
-
-config = require(configPath);
-refraction.config = config;
-config.isAlice = program.alice;
-
+const configPath = program.configPath || '../examples/config.json';
+refraction.configure(require(configPath));
+refraction.configure({ isAlice: program.alice });
 
 const rl = readline.createInterface({
   input: process.stdin,

@@ -1,76 +1,131 @@
 'use strict';
 
+const async = require('async');
 const EventEmitter = require('events');
 const bitcore = require('bitcore-lib');
-const Insight = require('bitcore-explorers').Insight;
 const request = require('request');
+const Agent = require('socks5-https-client/lib/Agent');
+const _ = require('lodash');
 
-let insight = new Insight();
+const config = require('./refraction').config;
 
-// Get confirmed balance of given address
-function balance(address) {
-  return new Promise(function (fulfill, reject) {
-    insight.address(address, function(err, addr) {
-      if (err) {
-        reject(err);
-      } else {
-        fulfill(addr.balance);
-      }
-    });
+const DEFAULT_POLL_INTERVAL = 15;
+
+function balance(address, options) {
+  options = options || {};
+  return addressInfo(address).then((data) => {
+    if (options.includeUnconfirmed) {
+      return data.balanceSat + data.unconfirmedBalanceSat;
+    }
+    else {
+      return data.balanceSat;
+    }
   });
 }
 
-function unconfirmedBalance(address) {
-  return new Promise(function (fulfill, reject) {
-    insight.address(address, function(err, addr) {
-      if (err) {
-        reject(err);
-      } else {
-        fulfill(addr.unconfirmedBalance);
-      }
-    });
+// Broadcasts a Bitcore Transaction and returns the TxId
+function broadcast(transaction) {
+  return postPath("/tx/send", { rawtx: transaction.toString() }).then(() => transaction.hash);
+}
+
+// Return all unspent outputs for a given address
+// Returns an array of UnspentOutputs
+function utxos(address) {
+  return fetchPath(`/addr/${address.toString()}/utxo`).then((response) => {
+    return response.map((utxoData) => bitcore.Transaction.UnspentOutput(utxoData));
   });
 }
 
-function whenCoinsSentFromAddress(address) {
-  const helper = function() {
-    return spendingTransactions(address).then((inputs) => {
-      if (inputs.length > 0) {
-        return inputs;
+function transaction(txHash) {
+  return fetchPath(`/rawtx/${txHash}`).then((response) => new bitcore.Transaction(response.rawtx));
+}
+
+function addressInfo(address) {
+  return fetchPath(`/addr/${address.toString()}`);
+};
+
+function whenCoinsSentFromAddress(address, options) {
+  options = options || {};
+  const pollInterval = options.pollInterval || DEFAULT_POLL_INTERVAL;
+  const timeout = options.timeout && new Date(options.timeout);
+
+  const transactionsChecked = [];
+  const checkTransactions = () => {
+    if (timeout && new Date() > timeout) {
+      throw new Error(`Timeout while waiting for address ${address} to be funded`);
+    }
+
+    return addressInfo(address).then((data) => {
+      return new Promise((resolve, reject) => {
+        const transactionsUnchecked = _.difference(data.transactions, transactionsChecked);
+        async.map(
+          transactionsUnchecked,
+          (txHash, callback) => {
+            fetchPath(`/tx/${txHash}`)
+              .then((transactionDetails) => callback(null, transactionDetails))
+              .catch(callback);
+          },
+          (err, transactionsDetails) => {
+            for (let transactionDetails of transactionsDetails) {
+              transactionsChecked.push(transactionDetails.txid);
+              for (let input of transactionDetails.vin) {
+                if (input.addr === address.toString()) {
+                  return resolve({ txHash: transactionDetails.txid, index: input.n });
+                }
+              }
+            }
+            setTimeout(() => checkTransactions().then(resolve, reject), pollInterval * 1000);
+          }
+        );
+      });
+    });
+  };
+  return checkTransactions();
+}
+
+// Polls for confirmed address balance
+// Takes an optional timeout as a Date object
+function whenAddressHasBalance(address, minimumBalance, options) {
+  options = options || {};
+  const pollInterval = options.pollInterval || DEFAULT_POLL_INTERVAL;
+  const timeout = options.timeout && new Date(options.timeout);
+
+  const checkBalance = () => {
+    if (timeout && new Date() > timeout) {
+      throw new Error(`Timeout while waiting for address ${address} to be funded`);
+    }
+
+    return balance(address, { includeUnconfirmed: options.includeUnconfirmed }).then((balance) => {
+      if (balance >= minimumBalance) {
+        return;
       }
       else {
         return new Promise((resolve, reject) => {
-          return setTimeout(() => helper().then(resolve, reject), 1000 * 15);
+          setTimeout(() => checkBalance().then(resolve, reject), pollInterval * 1000);
         });
       }
     });
   };
-  return helper();
+  return checkBalance();
 }
 
-function fetchInputScript(txHash, index) {
-  return fetchBlockCypherPath(`/txs/${txHash}`)
-    .then((txData) => new bitcore.Script(txData.inputs[0].script));
-}
-
-function spendingTransactions(address) {
-  return fetchBlockCypherAddress(address).then((addressData) => {
-    return (addressData.txrefs || []).concat(addressData.unconfirmed_txrefs || [])
-      .filter(({ tx_input_n }) => tx_input_n >= 0)
-      .map(({ tx_hash, tx_input_n }) => {
-        return { txHash: tx_hash, index: tx_input_n }
-      });
-  });
-}
-
-function fetchBlockCypherPath(path, params) {
+function fetchPath(path, params) {
+  const options = {
+    url: config.insightUrl + "/api" + path,
+    qs: params,
+    agentClass: Agent,
+    agentOptions: {
+      socksHost: config.tor.ip,
+      socksPort: config.tor.port
+    }
+  };
   return new Promise((resolve, reject) => {
-    request(getBlockCypherBaseURL() + path, (err, response, body) => {
+    request.get(options, (err, response, body) => {
       if (err) {
         reject(err);
       }
       else if (response.statusCode !== 200) {
-        reject(`Received response code ${response.statusCode}`);
+        reject(`Received response code ${response.statusCode}: ${response.body}`);
       }
       else {
         resolve(JSON.parse(body));
@@ -79,105 +134,36 @@ function fetchBlockCypherPath(path, params) {
   });
 }
 
-function getBlockCypherBaseURL() {
-  let network;
-  if (bitcore.Networks.defaultNetwork == bitcore.Networks.testnet) {
-    network = "test3";
-  }
-  else {
-    network = "main";
-  }
-  return `https://api.blockcypher.com/v1/btc/${network}`;
-}
-
-function fetchBlockCypherAddress(address) {
-  return fetchBlockCypherPath(`/addrs/${address}`);
-}
-
-// Polls for confirmed address balance
-// Takes an optional timeout as a Date object
-function whenAddressHasBalance(address, minimumBalance, timeout) {
-  if (timeout == null)
-    timeout = new Date("October 13, 3000 11:13:00");
-
-  return new Promise((resolve) => setTimeout(resolve, 5 * 1000));
-
-  const _addrLoop = function() {
-    return balance(address).then((balance) => {
-      if (balance >= minimumBalance) {
-        return balance;
-      }
-      else {
-        if (new Date() > timeout) {
-          throw new Error(`Timeout while waiting for address ${address} to be funded`);
-        }
-        else {
-          return new Promise((resolve, reject) => {
-            setTimeout(() => _addrLoop().then(resolve, reject), 1000 * 15);
-          });
-        }
-      }
-    });
-  }
-  return _addrLoop();
-}
-
-// Broadcasts a Bitcore Transaction and returns the TxId
-function broadcastTransaction(transaction) {
-  let endpoint;
-  if (bitcore.Networks.defaultNetwork = bitcore.Networks.testnet) {
-    endpoint = 'https://testnet.blockexplorer.com/api/tx/send';
-  }
-  else {
-    endpoint = 'https://blockexplorer.com/api/tx/send';
-  }
-
+function postPath(path, params) {
+  const options = {
+    url: config.insightUrl + "/api" + path,
+    body: params,
+    json: true,
+    agentClass: Agent,
+    agentOptions: {
+      socksHost: config.tor.ip,
+      socksPort: config.tor.port
+    }
+  };
   return new Promise((resolve, reject) => {
-    request.post({ url: endpoint, body: { rawtx: transaction.toString() }, json: true }, (err, response, body) => {
+    request.post(options, (err, response, body) => {
       if (err) {
         reject(err);
       }
       else if (response.statusCode !== 200) {
-        reject(`Received response code ${response.statusCode} ${body}`);
+        reject(`Received response code ${response.statusCode}: ${response.body}`);
       }
       else {
-        resolve();
+        const parsedBody = typeof(body) === 'object' ? body : JSON.parse(body);
+        resolve(parsedBody);
       }
     });
   });
 }
 
-// Return all unspent outputs for a given address
-// Returns an array of UnspentOutputs
-function utxos(address) {
-  return new Promise(function (fulfill, reject) {
-    try {
-      insight.getUnspentUtxos(address, function(err, utxos) {
-        if (err) {
-          reject(err);
-        } else {
-          fulfill(utxos);
-        }
-      });
-    }
-    catch (err) {
-      reject(err);
-    }
-  });
-}
-
-exports.whenAddressHasBalance = whenAddressHasBalance;
-exports.broadcastTransaction = broadcastTransaction;
-exports.spendingTransactions = spendingTransactions;
-exports.whenCoinsSentFromAddress = whenCoinsSentFromAddress;
-exports.fetchInputScript = fetchInputScript;
 exports.balance = balance;
+exports.broadcast = broadcast;
+exports.transaction = transaction;
 exports.utxos = utxos;
-
-// whenAddressHasBalance("1A66YkobmtQvGbq9jt5faw6nCE8tgjGgKT", 1000000000000, new Date(10 * 1000)).then(
-//   function(bal){console.log("FULFILLED: " + bal)},
-//   function(err){console.log("REJECTED: " + err)});
-
-// broadcastTransaction("1A66YkobmtQvGbq9jt5faw6nCE8tgjGgKT").then(
-//   function(bal){console.log("FULFILLED: " + bal)},
-//   function(err){console.log("REJECTED: " + err)});
+exports.whenCoinsSentFromAddress = whenCoinsSentFromAddress;
+exports.whenAddressHasBalance = whenAddressHasBalance;

@@ -136,7 +136,7 @@ class AliceProtocol extends BaseProtocol {
       })
       .then(({ transaction, redeemScript }) => {
         this.aliceCommitRedeemScript = redeemScript;
-        return blockchain.broadcastTransaction(transaction).then(() => transaction);
+        return blockchain.broadcast(transaction).then(() => transaction);
       })
       .then((transaction) => {
         this.client.send('aliceCommitment', { tx: transaction.toString() });
@@ -149,9 +149,11 @@ class AliceProtocol extends BaseProtocol {
     console.log(`Waiting for coins to be sent from ${inputAddress}`);
 
     return blockchain.whenCoinsSentFromAddress(inputAddress)
-      .then((inputs) => {
-        console.log(`Transaction ${inputs[0].txHash} spends from address ${inputAddress}`);
-        return blockchain.fetchInputScript(inputs[0].txHash, inputs[0].index);
+      .then(({ txHash, index }) => {
+        console.log(`Transaction ${txHash} spends from address ${inputAddress}`);
+        return blockchain.transaction(txHash).then(
+          (transaction) => transaction.inputs[index].script
+        );
       })
       .then((scriptSig) => {
         const chunks = _.take(scriptSig.chunks, this.invIndices.length);
@@ -185,7 +187,7 @@ class AliceProtocol extends BaseProtocol {
       .then((transaction) => {
         console.log(`Broadcasting claim transaction ${transaction.hash}`);
         console.log(`DEBUG: ${transaction.toString()}`);
-        return blockchain.broadcastTransaction(transaction).then(() => transaction);
+        return blockchain.broadcast(transaction).then(() => transaction);
       });
   }
 }

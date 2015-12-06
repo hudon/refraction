@@ -11,5 +11,8 @@
   "tor": {
     "ip": "127.0.0.1",
     "port": 9150
-  }
+  },
+  "network": "testnet3",
+  "insightUrl": "https://testnet.blockexplorer.com",
+  "acceptUnconfirmed": true
 }
