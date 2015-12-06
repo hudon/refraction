@@ -19,7 +19,7 @@ program
   .option('-p, --private-key <hex>', 'Private key for input')
   .parse(process.argv);
 
-const configPath = program.config || '../examples/config.json';
+const configPath = program.config || 'config.json';
 refraction.configure(JSON.parse(fs.readFileSync(configPath)));
 refraction.configure({ isAlice: program.alice });
 

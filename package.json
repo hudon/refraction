@@ -2,28 +2,29 @@
   "name": "refraction",
   "version": "0.0.1",
   "dependencies": {
-    "async": "^1.5.0",
-    "bitcore-lib": "^0.13.11",
-    "commander": "^2.9.0",
-    "lodash": "^3.8.0",
-    "math-buffer": "^0.1.1",
-    "request": "^2.67.0",
-    "socks": "^1.1.8"
+    "async": "~1.5.0",
+    "bitcore-lib": "~0.13.11",
+    "commander": "~2.9.0",
+    "lodash": "~3.8.0",
+    "math-buffer": "~0.1.1",
+    "request": "~2.67.0",
+    "socks": "~1.1.8"
   },
+  "engines": { "node" : ">=4.2.3" },
   "preferGlobal": true,
   "bin": {
     "refraction": "src/index.js"
   },
   "devDependencies": {
-    "chai": "^3.4.1",
-    "mocha": "^2.3.4",
-    "nock": "^3.3.2",
-    "sinon": "^1.17.2",
-    "sinon-chai": "^2.8.0"
+    "chai": "~3.4.1",
+    "mocha": "~2.3.4",
+    "nock": "~3.3.2",
+    "sinon": "~1.17.2",
+    "sinon-chai": "~2.8.0"
   },
   "scripts": {
-    "alice": "node --harmony --harmony-destructuring ./src/index.js --alice",
-    "bob": "node --harmony --harmony-destructuring ./src/index.js",
+    "client": "node --harmony --harmony-destructuring ./src/index.js --alice",
+    "server": "node --harmony --harmony-destructuring ./src/index.js",
     "test": "mocha --harmony --harmony-destructuring"
   }
 }

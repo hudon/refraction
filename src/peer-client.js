@@ -47,8 +47,8 @@ class PeerClient extends EventEmitter {
         type: 5
       },
       target: {
-        host: options.destination,
-        port: 80
+        host: options.destination.host,
+        port: options.destination.port
       }
     };
     Socks.createConnection(socksOptions, (err, socket, info) => {

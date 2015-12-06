@@ -1,6 +1,9 @@
 {
   "aliceClient": {
-    "destination": "qsu33twdme5te4bx.onion"
+    "destination": {
+      "host": "qsu33twdme5te4bx.onion",
+      "port": 80
+    }
   },
   "bobClient": {
     "server": {
@@ -14,5 +17,5 @@
   },
   "network": "testnet3",
   "insightUrl": "https://testnet.blockexplorer.com",
-  "acceptUnconfirmed": false
+  "acceptUnconfirmed": true
 }
