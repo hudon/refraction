@@ -1,3 +1,4 @@
+const fs = require ('fs');
 const program = require('commander');
 const readline = require('readline');
 const bitcore = require('bitcore-lib');
@@ -18,8 +19,8 @@ program
   .option('-p, --private-key <hex>', 'Private key for input')
   .parse(process.argv);
 
-const configPath = program.configPath || '../examples/config.json';
-refraction.configure(require(configPath));
+const configPath = program.config || '../examples/config.json';
+refraction.configure(JSON.parse(fs.readFileSync(configPath)));
 refraction.configure({ isAlice: program.alice });
 
 const rl = readline.createInterface({

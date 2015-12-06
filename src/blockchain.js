@@ -47,11 +47,10 @@ function addressInfo(address) {
 function whenCoinsSentFromAddress(address, options) {
   options = options || {};
   const pollInterval = options.pollInterval || DEFAULT_POLL_INTERVAL;
-  const timeout = options.timeout && new Date(options.timeout);
 
   const transactionsChecked = [];
   const checkTransactions = () => {
-    if (timeout && new Date() > timeout) {
+    if (options.timeout && new Date() > options.timeout) {
       throw new Error(`Timeout while waiting for address ${address} to be funded`);
     }
 
@@ -88,10 +87,9 @@ function whenCoinsSentFromAddress(address, options) {
 function whenAddressHasBalance(address, minimumBalance, options) {
   options = options || {};
   const pollInterval = options.pollInterval || DEFAULT_POLL_INTERVAL;
-  const timeout = options.timeout && new Date(options.timeout);
 
   const checkBalance = () => {
-    if (timeout && new Date() > timeout) {
+    if (options.timeout && new Date() > options.timeout) {
       throw new Error(`Timeout while waiting for address ${address} to be funded`);
     }
 

@@ -5,13 +5,13 @@ const bitcore = require('bitcore-lib');
 const crypto = require('crypto');
 const _ = require('lodash');
 
-const refraction = require('../refraction');
+const config = require('../refraction').config;
 const BobProtocol = require('./bob-protocol');
 const AliceProtocol = require('./alice-protocol');
 
 function start(session) {
   let protocolClass;
-  if (refraction.config.isAlice) {
+  if (config.isAlice) {
     protocolClass = AliceProtocol;
   }
   else {
@@ -21,7 +21,8 @@ function start(session) {
     client: session.client,
     amount: session.amount,
     privateKeyIn: session.privateKeyIn,
-    outAddress: session.payoutAddress
+    outAddress: session.payoutAddress,
+    acceptUnconfirmed: config.acceptUnconfirmed
   });
   return protocol.start();
 }

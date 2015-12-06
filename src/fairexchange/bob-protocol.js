@@ -15,7 +15,7 @@ const N = 100;
 const M = 95;
 
 class BobProtocol extends BaseProtocol {
-  constructor({ client, amount, privateKeyIn, outAddress, n, m }) {
+  constructor({ client, amount, privateKeyIn, outAddress, n, m, acceptUnconfirmed }) {
     super();
     this.client = client;
     this.amount = amount;
@@ -25,6 +25,7 @@ class BobProtocol extends BaseProtocol {
     this.outAddress = outAddress;
     this.n = n || N;
     this.m = m || M;
+    this.acceptUnconfirmed = acceptUnconfirmed;
   }
 
   start() {
@@ -37,24 +38,28 @@ class BobProtocol extends BaseProtocol {
     if (amount !== this.amount) {
       throw new Error(`Amount must be ${this.amount}`);
     }
-    if (blockchain.balance(address) < this.amount) {
-      throw new Error("Address has insufficient balance");
-    }
 
-    this.addressA0 = new bitcore.Address.fromString(address);
+    return blockchain.balance(address, { includeUnconfirmed: this.acceptUnconfirmed })
+      .then((balance) => {
+        if (balance < this.amount) {
+          throw new Error("Address has insufficient balance");
+        }
 
-    const currentTime = fairExchange.currentTime();
-    this.aliceLockTime = currentTime + ALICE_TIMEOUT;
-    this.bobLockTime = currentTime + BOB_TIMEOUT;
+        this.addressA0 = new bitcore.Address.fromString(address);
 
-    this.client.send('params', {
-      aliceLockTime: this.aliceLockTime,
-      bobLockTime: this.bobLockTime,
-      address: this.addressB0,
-      n: this.n,
-      m: this.m
-    });
-    return this.await('secrets', 'handleSecrets');
+        const currentTime = fairExchange.currentTime();
+        this.aliceLockTime = currentTime + ALICE_TIMEOUT;
+        this.bobLockTime = currentTime + BOB_TIMEOUT;
+
+        this.client.send('params', {
+          aliceLockTime: this.aliceLockTime,
+          bobLockTime: this.bobLockTime,
+          address: this.addressB0.toString(),
+          n: this.n,
+          m: this.m
+        });
+        return this.await('secrets', 'handleSecrets');
+      });
   }
 
   handleSecrets({ pubkeyA1, pubkeyA2, secretsA }) {
@@ -174,7 +179,14 @@ class BobProtocol extends BaseProtocol {
     }
 
     const aliceCommitAddress = aliceCommitOutScript.toAddress();
-    return blockchain.whenAddressHasBalance(aliceCommitAddress, this.amount, this.bobLockTime)
+    return blockchain.whenAddressHasBalance(
+      aliceCommitAddress,
+      this.amount,
+      {
+        timeout: new Date(this.bobLockTime * 1000),
+        includeUnconfirmed: this.acceptUnconfirmed
+      }
+    )
       .then(this.checkReclaimFunds.bind(this))
       .then(() => {
         console.log("Alice's commitment transaction was confirmed.");

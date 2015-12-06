@@ -2,6 +2,7 @@ const bitcore = require('bitcore-lib');
 
 const xim = require('./xim');
 const fairExchange = require('./fairexchange');
+const config = require('./refraction').config;
 const blockchain = require('./blockchain');
 
 class Session {
@@ -13,7 +14,11 @@ class Session {
   }
 
   start() {
-    return blockchain.whenAddressHasBalance(this.privateKeyIn.toAddress(), this.amount)
+    return blockchain.whenAddressHasBalance(
+      this.privateKeyIn.toAddress(),
+      this.amount,
+      { includeUnconfirmed: config.acceptUnconfirmed }
+    )
       .then(() => {
         console.log(`Received deposit transactions to address ${this.privateKeyIn.toAddress()}`);
         return xim.discover();

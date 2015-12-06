@@ -14,5 +14,5 @@
   },
   "network": "testnet3",
   "insightUrl": "https://testnet.blockexplorer.com",
-  "acceptUnconfirmed": true
+  "acceptUnconfirmed": false
 }

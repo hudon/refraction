@@ -10,7 +10,7 @@ const transactionGenerator = require('./transaction-generator');
 const BaseProtocol = require('./base-protocol');
 
 class AliceProtocol extends BaseProtocol {
-  constructor({ client, amount, privateKeyIn, outAddress }) {
+  constructor({ client, amount, privateKeyIn, outAddress, acceptUnconfirmed }) {
     super();
     this.client = client;
     this.amount = amount;
@@ -18,6 +18,7 @@ class AliceProtocol extends BaseProtocol {
     this.addressA0 = this.prvkeyA0.toAddress();
     this.changeAddress = this.addressA0;
     this.outAddress = outAddress;
+    this.acceptUnconfirmed = acceptUnconfirmed;
   }
 
   start() {
@@ -31,29 +32,33 @@ class AliceProtocol extends BaseProtocol {
   handleParams({ aliceLockTime, bobLockTime, address, n, m }) {
     console.log("Received exchange parameters from peer");
 
-    if (blockchain.balance(address) < this.amount) {
-      throw new Error("Address has insufficient balance");
-    }
+    console.log(address);
+    return blockchain.balance(address, { includeUnconfirmed: this.acceptUnconfirmed })
+      .then((balance) => {
+        if (balance < this.amount) {
+          throw new Error("Address has insufficient balance");
+        }
 
-    // TODO: Validate locktimes, n, and m
+        // TODO: Validate locktimes, n, and m
 
-    this.aliceLockTime = aliceLockTime;
-    this.bobLockTime = bobLockTime;
-    this.n = n;
-    this.m = m;
-    this.prvkeyA1 = new bitcore.PrivateKey();
-    this.prvkeyA2 = new bitcore.PrivateKey();
+        this.aliceLockTime = aliceLockTime;
+        this.bobLockTime = bobLockTime;
+        this.n = n;
+        this.m = m;
+        this.prvkeyA1 = new bitcore.PrivateKey();
+        this.prvkeyA2 = new bitcore.PrivateKey();
 
-    return fairExchange.generateSecrets(this.n).then((secretsA) => {
-      this.secretsA = secretsA;
+        return fairExchange.generateSecrets(this.n).then((secretsA) => {
+          this.secretsA = secretsA;
 
-      this.client.send('secrets', {
-        pubkeyA1: this.prvkeyA1.toPublicKey().toString(),
-        pubkeyA2: this.prvkeyA2.toPublicKey().toString(),
-        secretsA: this.secretsA.map((secret) => secret.toString('hex'))
+          this.client.send('secrets', {
+            pubkeyA1: this.prvkeyA1.toPublicKey().toString(),
+            pubkeyA2: this.prvkeyA2.toPublicKey().toString(),
+            secretsA: this.secretsA.map((secret) => secret.toString('hex'))
+          });
+          return this.await('hashes', 'handleHashes');
+        });
       });
-      return this.await('hashes', 'handleHashes');
-    });
   }
 
   handleHashes({ hashesAB, hashesB, pubkeyB1, pubkeyB2 }) {
@@ -120,7 +125,14 @@ class AliceProtocol extends BaseProtocol {
     }
 
     const bobCommitAddress = bobCommitOutScript.toAddress();
-    return blockchain.whenAddressHasBalance(bobCommitAddress, this.amount)
+    return blockchain.whenAddressHasBalance(
+      bobCommitAddress,
+      this.amount,
+      {
+        timeout: new Date(this.aliceLockTime * 1000),
+        includeUnconfirmed: this.acceptUnconfirmed
+      }
+    )
       .then(() => {
         console.log("Bob's commitment transaction was confirmed.");
 
