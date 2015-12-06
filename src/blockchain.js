@@ -4,7 +4,7 @@ const async = require('async');
 const EventEmitter = require('events');
 const bitcore = require('bitcore-lib');
 const request = require('request');
-const Agent = require('socks5-https-client/lib/Agent');
+const Socks = require('socks');
 const _ = require('lodash');
 
 const config = require('./refraction').config;
@@ -113,11 +113,7 @@ function fetchPath(path, params) {
   const options = {
     url: config.insightUrl + "/api" + path,
     qs: params,
-    agentClass: Agent,
-    agentOptions: {
-      socksHost: config.tor.ip,
-      socksPort: config.tor.port
-    }
+    agent: socksAgent()
   };
   return new Promise((resolve, reject) => {
     request.get(options, (err, response, body) => {
@@ -139,11 +135,7 @@ function postPath(path, params) {
     url: config.insightUrl + "/api" + path,
     body: params,
     json: true,
-    agentClass: Agent,
-    agentOptions: {
-      socksHost: config.tor.ip,
-      socksPort: config.tor.port
-    }
+    agent: socksAgent()
   };
   return new Promise((resolve, reject) => {
     request.post(options, (err, response, body) => {
@@ -159,6 +151,19 @@ function postPath(path, params) {
       }
     });
   });
+}
+
+function socksAgent() {
+  const agent = new Socks.Agent(
+    {
+      proxy: {
+        ipaddress: config.tor.ip,
+        port: config.tor.port,
+        type: 5
+      }
+    },
+    true  // HTTPS
+  );
 }
 
 exports.balance = balance;

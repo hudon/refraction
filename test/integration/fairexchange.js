@@ -85,7 +85,9 @@ describe('Fair Exchange', function() {
       client: client,
       amount: amount,
       privateKeyIn: bobPrivateKey,
-      outAddress: bobAddressOut
+      outAddress: bobAddressOut,
+      n: 10,
+      m: 7
     });
 
     Promise.all([bob.start(), alice.start()])

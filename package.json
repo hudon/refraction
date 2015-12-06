@@ -8,8 +8,7 @@
     "lodash": "^3.8.0",
     "math-buffer": "^0.1.1",
     "request": "^2.67.0",
-    "socks": "^1.1.8",
-    "socks5-https-client": "^1.1.2"
+    "socks": "^1.1.8"
   },
   "preferGlobal": true,
   "bin": {

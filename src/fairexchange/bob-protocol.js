@@ -15,7 +15,7 @@ const N = 100;
 const M = 95;
 
 class BobProtocol extends BaseProtocol {
-  constructor({ client, amount, privateKeyIn, outAddress }) {
+  constructor({ client, amount, privateKeyIn, outAddress, n, m }) {
     super();
     this.client = client;
     this.amount = amount;
@@ -23,6 +23,8 @@ class BobProtocol extends BaseProtocol {
     this.addressB0 = this.prvkeyB0.toAddress();
     this.changeAddress = this.addressB0;
     this.outAddress = outAddress;
+    this.n = n || N;
+    this.m = m || M;
   }
 
   start() {
@@ -44,8 +46,6 @@ class BobProtocol extends BaseProtocol {
     const currentTime = fairExchange.currentTime();
     this.aliceLockTime = currentTime + ALICE_TIMEOUT;
     this.bobLockTime = currentTime + BOB_TIMEOUT;
-    this.n = N;
-    this.m = M;
 
     this.client.send('params', {
       aliceLockTime: this.aliceLockTime,
@@ -65,7 +65,12 @@ class BobProtocol extends BaseProtocol {
     if (this.secretsA.length !== this.n) {
       throw new Error(`Did not receive ${this.n} secrets`);
     }
-    // TODO: Check size/entropy of Alice secrets
+    for (let secretA of this.secretsA) {
+      // TODO: Check entropy of Alice secrets as well.
+      if (secretA.length !== 32) {
+        throw new Error("Secrets are not 32 bytes");
+      }
+    }
 
     this.pubkeyA1 = new bitcore.PublicKey(pubkeyA1);
     this.pubkeyA2 = new bitcore.PublicKey(pubkeyA2);
