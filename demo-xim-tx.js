@@ -40,7 +40,7 @@ function makeSolicitationTransaction() {
     .from(utxo)
     .addOutput(new bitcore.Transaction.Output({
       script: textScript,
-      satoshis: 10000
+      satoshis: 10000 // may not need to burn...
     }));
 
   transaction.to(privateKey.toAddress(), inputAmount - transaction._estimateFee() - adFeeHalf)
@@ -48,5 +48,24 @@ function makeSolicitationTransaction() {
 
   return transaction;
 }
+
+/*
+ * confirmed tx example:
+ * https://live.blockcypher.com/btc-testnet/tx/cb65fa713df82f35d24964630f338f4c624e7b202d671c420049c8e952d91376/
+ *
+ * confirmed tx data in hex:
+ irb(main):044:0> hex = 'dfffa3579a1be134614551eeac5e134171737533337477646d653574653462782e6f6e696f6e0c000000'
+=> "dfffa3579a1be134614551eeac5e134171737533337477646d653574653462782e6f6e696f6e0c000000"
+irb(main):045:0> nonce = hex[0..31]
+=> "dfffa3579a1be134614551eeac5e1341"
+irb(main):047:0> onion = hex[32..75]
+=> "71737533337477646d653574653462782e6f6e696f6e"
+irb(main):049:0> [onion].pack('H*').force_encoding('utf-8')
+=> "qsu33twdme5te4bx.onion"
+irb(main):050:0> pool = hex[76..-1]
+=> "0c000000"
+irb(main):053:0> [pool].pack('H*').unpack('L*')
+=> [12]
+*/
 
 exports.makeSolicitation = makeSolicitationTransaction;
