@@ -67,6 +67,7 @@ class PeerClient extends EventEmitter {
   _listen(options, callback) {
     this._server = net.createServer((socket) => {
       console.log('PeerClient: Bob: Alice connected!');
+      // TODO(hudon) handle reconnect
       this._socket = socket;
       this._handleSocketEvents();
       callback();

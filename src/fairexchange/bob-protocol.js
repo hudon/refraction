@@ -7,7 +7,9 @@ const _ = require('lodash');
 const blockchain = require('../blockchain');
 const fairExchange = require('./index');
 const transactionGenerator = require('./transaction-generator');
-const BaseProtocol = require('./base-protocol');
+
+const BaseProtocol = require('../base-protocol');
+const utils = require('../utils');
 
 const ALICE_TIMEOUT = 1 * 60 * 60;  // One hour
 const BOB_TIMEOUT = 2 * 60 * 60;  // Two hours
@@ -47,7 +49,7 @@ class BobProtocol extends BaseProtocol {
 
         this.addressA0 = new bitcore.Address.fromString(address);
 
-        const currentTime = fairExchange.currentTime();
+        const currentTime = utils.currentTime();
         this.aliceLockTime = currentTime + ALICE_TIMEOUT;
         this.bobLockTime = currentTime + BOB_TIMEOUT;
 
@@ -206,7 +208,7 @@ class BobProtocol extends BaseProtocol {
   }
 
   checkReclaimFunds() {
-    if (fairExchange.currentTime() < this.bobLockTime) {
+    if (utils.currentTime() < this.bobLockTime) {
       return;
     }
 

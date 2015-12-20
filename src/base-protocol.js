@@ -1,4 +1,4 @@
-const fairExchange = require('./index');
+const utils = require('./utils');
 
 class BaseProtocol {
   await(message, handlerName) {
@@ -19,7 +19,7 @@ class BaseProtocol {
     return new Promise((resolve, reject) => {
       let timedOut = false;
 
-      const timeout = endTime - fairExchange.currentTime();
+      const timeout = endTime - utils.currentTime();
       if (timeout <= 0) {
         return reject("Timed out");
       }

@@ -27,10 +27,6 @@ function start(session) {
   return protocol.start();
 }
 
-function currentTime() {
-  return Math.floor((new Date()).getTime() / 1000);
-}
-
 // Generate n 256 bit secrets
 function generateSecrets(n) {
   return new Promise((resolve, reject) => {
@@ -53,7 +49,6 @@ function pickIndices(n, m) {
   return _.take(_.shuffle(_.range(n)), m);
 };
 
-exports.currentTime = currentTime;
 exports.generateSecrets = generateSecrets;
 exports.hash = hash;
 exports.pickIndices = pickIndices;
