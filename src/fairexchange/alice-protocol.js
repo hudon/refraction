@@ -7,7 +7,7 @@ const _ = require('lodash');
 const blockchain = require('../blockchain');
 const fairExchange = require('./index');
 const transactionGenerator = require('./transaction-generator');
-const BaseProtocol = require('./base-protocol');
+const BaseProtocol = require('../base-protocol');
 
 class AliceProtocol extends BaseProtocol {
   constructor({ client, amount, privateKeyIn, outAddress, acceptUnconfirmed }) {
